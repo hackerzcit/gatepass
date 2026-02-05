@@ -6,6 +6,9 @@ export const baseAdminURL = process.env.NEXT_PUBLIC_BASE_ADMIN_URL;
 export const baseAppURL = process.env.NEXT_PUBLIC_BASE_APP_URL;
 export const baseGoogleURL = process.env.NEXT_PUBLIC_GOOGLE_BASE_URL;
 
+// Backend API base URL for sync operations
+export const backendApiURL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "https://hackerz-app-backend-new-production.up.railway.app";
+console.log("backendApiURL", backendApiURL)
 export const axiosBase = axios.create({
   baseURL,
   headers: {
@@ -37,6 +40,14 @@ export const axiosAppInstance = axios.create({
 
 export const axiosGoogleInstance = axios.create({
   baseURL: baseGoogleURL,
+  headers: {
+    "Content-Type": "application/json"
+  }
+});
+
+// Backend API instance for sync operations (push/pull)
+export const axiosBackendInstance = axios.create({
+  baseURL: backendApiURL,
   headers: {
     "Content-Type": "application/json"
   }

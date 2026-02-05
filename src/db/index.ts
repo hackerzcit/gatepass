@@ -18,6 +18,7 @@ export type {
 
 // Export sync functions
 export { syncPull } from './syncPull'
+export { syncPush, pushSingleEntryLog } from './syncPush'
 
 /**
  * Initialize the app database
