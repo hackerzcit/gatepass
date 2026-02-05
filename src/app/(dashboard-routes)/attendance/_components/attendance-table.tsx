@@ -19,134 +19,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, UserCircle, Mail, Phone, Hash, QrCode, LogIn, CheckCircle, School, Info, Calendar, Building, Users as UsersIcon } from "lucide-react";
-import { useUsersSearch } from "../../_hooks/queries";
-import { db, type EntryLog, type User, pushSingleEntryLog } from "@/db";
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { useOnlineStatus } from "@/hooks/use-online-status";
+import { Search, Loader2, UserCircle, Mail, Phone, Hash, QrCode, Info, School, Calendar, Building, Users as UsersIcon, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { useEntryLogUsersSearch } from "../../_hooks/queries";
+import { type User } from "@/db";
+import { useState } from "react";
 
-export function UsersTable() {
-  const { users, loading, searchQuery, setSearchQuery } = useUsersSearch();
-  const { data: session } = useSession();
-  const isOnline = useOnlineStatus();
-  const [markingEntry, setMarkingEntry] = useState<string | null>(null);
-  const [markedUsers, setMarkedUsers] = useState<Set<string>>(new Set());
+export function AttendanceTable() {
+  const { users, loading, searchQuery, setSearchQuery, currentPage, totalPages, goToPage, totalUsers } = useEntryLogUsersSearch();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Check which users are already marked in entry_logs
-  useEffect(() => {
-    async function checkMarkedUsers() {
-      if (users.length === 0) return;
-
-      const uniqueCodes = users.map((user) => user.unique_code);
-      const entryLogs = await db.entry_logs
-        .where("unique_code")
-        .anyOf(uniqueCodes)
-        .toArray();
-
-      const marked = new Set(entryLogs.map((log) => log.unique_code));
-      setMarkedUsers(marked);
-    }
-
-    checkMarkedUsers();
-  }, [users]);
-
-  const handleMarkEntry = async (uniqueCode: string, userName: string) => {
-    try {
-      setMarkingEntry(uniqueCode);
-
-      // Get admin_id from session or local DB
-      let adminId = "";
-      const sessionUser = session?.user as { adminId?: string; userId?: string };
-      adminId = sessionUser?.adminId || sessionUser?.userId || "";
-
-      // If not in session, try to get from local DB
-      if (!adminId) {
-        const admins = await db.admins.toArray();
-        if (admins.length > 0) {
-          adminId = admins[0].admin_id;
-        }
-      }
-
-      if (!adminId) {
-        toast.error("Admin ID not found. Please log in again.");
-        return;
-      }
-
-      // Create entry log record
-      const entryLog: EntryLog = {
-        unique_code: uniqueCode,
-        admin_id: adminId,
-        source: "dashboard",
-        created_at: new Date().toISOString(),
-        _sync_status: "pending",
-      };
-
-      // Add to database
-      const entryLogId = await db.entry_logs.add(entryLog);
-      console.log("✅ Entry log created with ID:", entryLogId);
-
-      // Update marked users set
-      setMarkedUsers((prev) => new Set(prev).add(uniqueCode));
-
-      // If online, try to push immediately
-      if (isOnline) {
-        console.log("📤 Attempting immediate push of entry log...");
-        try {
-          // Get access token
-          const tokenResponse = await fetch("/api/auth/get-token");
-          if (tokenResponse.ok) {
-            const { access_token } = await tokenResponse.json();
-            
-            // Push entry log to backend
-            const pushResult = await pushSingleEntryLog(entryLogId as number, access_token);
-            
-            if (pushResult.success) {
-              console.log("✅ Entry log synced immediately");
-              toast.success(`Entry marked for ${userName || uniqueCode}`, {
-                description: "Synced to server successfully",
-                icon: <CheckCircle className="h-4 w-4" />,
-              });
-            } else {
-              console.warn("⚠️ Immediate push failed, will sync later:", pushResult.error);
-              toast.success(`Entry marked for ${userName || uniqueCode}`, {
-                description: "Saved locally, will sync later",
-                icon: <CheckCircle className="h-4 w-4" />,
-              });
-            }
-          } else {
-            console.warn("⚠️ Failed to get access token, will sync later");
-            toast.success(`Entry marked for ${userName || uniqueCode}`, {
-              description: "Saved locally, will sync later",
-              icon: <CheckCircle className="h-4 w-4" />,
-            });
-          }
-        } catch (pushError) {
-          console.warn("⚠️ Immediate push failed, will sync later:", pushError);
-          toast.success(`Entry marked for ${userName || uniqueCode}`, {
-            description: "Saved locally, will sync later",
-            icon: <CheckCircle className="h-4 w-4" />,
-          });
-        }
-      } else {
-        // Offline mode
-        toast.success(`Entry marked for ${userName || uniqueCode}`, {
-          description: "Saved locally (offline), will sync when online",
-          icon: <CheckCircle className="h-4 w-4" />,
-        });
-      }
-    } catch (error) {
-      console.error("Error marking entry:", error);
-      toast.error("Failed to mark entry", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-      });
-    } finally {
-      setMarkingEntry(null);
-    }
-  };
 
   const handleOpenUserDetails = (user: User) => {
     setSelectedUser(user);
@@ -158,7 +39,7 @@ export function UsersTable() {
       <CardHeader>
         <CardTitle className="text-xl text-orange-700 dark:text-orange-400 flex items-center gap-2">
           <UserCircle className="h-5 w-5" />
-          Search Users
+          Search Attendance History
         </CardTitle>
         
         {/* Search Input */}
@@ -181,16 +62,16 @@ export function UsersTable() {
           </div>
         )}
 
-        {/* No Search Query */}
-        {!searchQuery && !loading && (
+        {/* No Results */}
+        {!loading && users.length === 0 && totalUsers === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            <Search className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p>Start typing to search for users</p>
+            <UserCircle className="h-12 w-12 mx-auto mb-2 opacity-30" />
+            <p>No users found with attendance records</p>
           </div>
         )}
 
-        {/* No Results */}
-        {searchQuery && !loading && users.length === 0 && (
+        {/* No Search Results */}
+        {!loading && searchQuery && users.length === 0 && totalUsers > 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <UserCircle className="h-12 w-12 mx-auto mb-2 opacity-30" />
             <p>No users found matching &quot;{searchQuery}&quot;</p>
@@ -203,16 +84,10 @@ export function UsersTable() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-50 dark:hover:bg-orange-950/30">
-                  {/* <TableHead className="font-semibold text-orange-700 dark:text-orange-400">
-                    <div className="flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      User ID
-                    </div>
-                  </TableHead> */}
                   <TableHead className="font-semibold text-orange-700 dark:text-orange-400">
                     <div className="flex items-center gap-1">
                       <QrCode className="h-3 w-3" />
-                      Code
+                        Code
                     </div>
                   </TableHead>
                   <TableHead className="font-semibold text-orange-700 dark:text-orange-400">
@@ -250,14 +125,6 @@ export function UsersTable() {
                     key={user.user_id}
                     className="hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-colors"
                   >
-                    {/* <TableCell className="font-mono text-xs">
-                      <Badge
-                        variant="outline"
-                        className="border-orange-300 text-orange-700 dark:text-orange-400"
-                      >
-                        {user.user_id?.slice(0, 8)}...
-                      </Badge>
-                    </TableCell> */}
                     <TableCell className="font-mono text-sm font-semibold text-orange-600">
                       {user.unique_code}
                     </TableCell>
@@ -283,40 +150,20 @@ export function UsersTable() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleOpenUserDetails(user)}
-                          className="border-orange-300 text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                          className="border-orange-300 text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 gap-1"
                         >
                           <Info className="h-3 w-3" />
+                          Info
                         </Button>
-                        {markedUsers.has(user.unique_code) ? (
-                          <Button
-                            size="sm"
-                            disabled
-                            variant="outline"
-                            className="border-green-300 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/30 cursor-not-allowed"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            Attended
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => handleMarkEntry(user.unique_code, user.name)}
-                            disabled={markingEntry === user.unique_code}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {markingEntry === user.unique_code ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Marking...
-                              </>
-                            ) : (
-                              <>
-                                <LogIn className="h-3 w-3" />
-                                Mark Entry
-                              </>
-                            )}
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          disabled
+                          variant="outline"
+                          className="border-green-300 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/30 cursor-not-allowed gap-1"
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          Attended
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -324,12 +171,46 @@ export function UsersTable() {
               </TableBody>
             </Table>
             
-            {/* Results Count */}
-            <div className="px-4 py-2 bg-orange-50 dark:bg-orange-950/30 border-t border-orange-200 dark:border-orange-800">
-              <p className="text-sm text-orange-700 dark:text-orange-400">
-                Showing {users.length} result{users.length !== 1 ? "s" : ""} 
-                {users.length === 50 && " (limited to 50)"}
-              </p>
+            {/* Results Count and Pagination */}
+            <div className="px-4 py-3 bg-orange-50 dark:bg-orange-950/30 border-t border-orange-200 dark:border-orange-800">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  Showing {((currentPage - 1) * 50) + 1} to {Math.min(currentPage * 50, totalUsers)} of {totalUsers} {searchQuery ? "matching " : ""}result{totalUsers !== 1 ? "s" : ""}
+                </p>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-orange-700 dark:text-orange-400">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                    </div>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -375,7 +256,7 @@ export function UsersTable() {
                       <Hash className="h-3 w-3" />
                       User ID
                     </label>
-                    <p className="text-base font-mono break-all">{selectedUser.user_id}</p>
+                    <p className="text-sm font-mono break-all">{selectedUser.user_id}</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-muted-foreground">Gender</label>

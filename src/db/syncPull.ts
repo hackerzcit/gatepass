@@ -1,11 +1,9 @@
 'use client'
 
-import axios from 'axios'
+import { axiosBackendInstance } from '@/lib/axios-instance'
 import { db } from './dexie'
 import type { User, Event, Enrollment, Payment } from './dexie'
 
-// Backend API base URL (adjust as needed or use environment variable)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hackerz-app-backend-new-production.up.railway.app'
 /**
  * Response type from the backend /sync/pull endpoint
  */
@@ -57,16 +55,14 @@ export async function syncPull(authToken?: string): Promise<SyncPullResult> {
     console.log('📅 Last synced at:', lastPulledAt || 'Never')
 
     // STEP 2: Call backend API with timestamp
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    const headers: Record<string, string> = {}
 
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`
     }
 
-    const response = await axios.post<SyncPullResponse>(
-      `${API_BASE_URL}/sync/pull`,
+    const response = await axiosBackendInstance.post<SyncPullResponse>(
+      '/sync/pull',
       { lastPulledAt },
       { headers }
     )

@@ -72,7 +72,7 @@ export function getMenuList(pathname: string): Group[] {
       groupLabel: "System",
       menus: [
         {
-          href: "/system/sync",
+          href: "/sync",
           label: "Sync Status",
           icon: RefreshCcw
         },

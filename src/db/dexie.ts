@@ -4,12 +4,19 @@ import Dexie, { type EntityTable } from "dexie";
 
 // Define types for our database tables
 export interface User {
-  user_id: string;
-  unique_code: string;
-  email: string;
-  mobile_number?: string;
-  name?: string;
-  [key: string]: any;
+  user_id: string
+  unique_code: string
+  name: string
+  email: string
+  mobile_number: string
+  department: string
+  gender: string
+  year: string
+  college: string
+  is_online_user: boolean
+  created_at: string
+  updated_at: string
+  [key: string]: any
 }
 
 export interface Event {
