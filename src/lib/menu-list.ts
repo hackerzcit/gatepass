@@ -1,4 +1,4 @@
-import { LucideIcon, Search, ClipboardList, Calendar, CreditCard, Trophy, Award, RefreshCcw } from "lucide-react";
+import { LucideIcon, Search, ClipboardList, Calendar, CreditCard, Trophy, RefreshCcw } from "lucide-react";
 
 type Submenu = {
   href: string;
@@ -62,13 +62,8 @@ export function getMenuList(pathname: string): Group[] {
       menus: [
         {
           href: "/winners",
-          label: "Declare Winner",
-          icon: Trophy
-        },
-        {
-          href: "/winners/list",
           label: "Winner List",
-          icon: Award
+          icon: Trophy
         }
       ]
     },

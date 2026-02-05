@@ -14,6 +14,17 @@ export interface DashboardStats {
   totalPayments: number;
 }
 
+// Allowed Event IDs for filter
+const ALLOWED_EVENT_IDS = [
+  "cmk00z5yy001f11hx2zy2f0b4",
+  "cmk00vh53001d11hxj4w6yfct",
+  "cmk00klfv001911hxi0vvpgsi",
+  "cmk00hkxn001311hxh3qkl5bo",
+  "cmk00eke8001011hxav2iryjn",
+  "cmk00aeqo000s11hxh8gka0pn",
+  "cmk006rg0000q11hxyagxkhi8",
+];
+
 // ============================================================
 // Dashboard Stats Hook
 // ============================================================
@@ -51,7 +62,8 @@ export function useDashboardStats() {
           totalPayments: paymentsCount,
         });
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Failed to fetch stats");
+        const error =
+          err instanceof Error ? err : new Error("Failed to fetch stats");
         setError(error);
         console.error("Error fetching stats:", error);
       } finally {

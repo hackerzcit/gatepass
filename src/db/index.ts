@@ -14,6 +14,7 @@ export type {
   SyncMeta,
   Admin,
   CodeBlock,
+  Winner,
 } from './dexie'
 
 // Export sync functions
