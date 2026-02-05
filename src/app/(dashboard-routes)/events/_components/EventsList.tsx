@@ -122,9 +122,7 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
                   )}
                   
                   <div className="flex items-center justify-between pt-2 border-t border-orange-100">
-                    <span className="text-xs text-orange-600 font-mono">
-                      {event.event_id.slice(0, 8)}...
-                    </span>
+                   
                     <Button
                       size="sm"
                       variant="ghost"
