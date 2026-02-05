@@ -24,10 +24,8 @@ import {
   Calendar,
   Users,
 } from "lucide-react";
-import { useEventDetail, useEventUsersSearch, useAttendanceCheck } from "../../_hooks/events-queries";
-import { db, type Attendance } from "@/db";
-import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEventDetail, useEventUsersSearch, useAttendanceCheck } from "../../../../module/events/queries";
+import { useMarkAttendance } from "../../../../module/events/mutation";
 import { toast } from "sonner";
 
 interface EventDetailProps {
@@ -38,61 +36,29 @@ interface EventDetailProps {
 export default function EventDetail({ eventId, onBack }: EventDetailProps) {
   const { event, enrolledUsers, loading: eventLoading } = useEventDetail(eventId);
   const { users, loading: searchLoading, searchQuery, setSearchQuery } = useEventUsersSearch(eventId);
-  const { data: session } = useSession();
-  const [markingAttendance, setMarkingAttendance] = useState<string | null>(null);
+  const markAttendanceMutation = useMarkAttendance(eventId);
 
   // Get user IDs for attendance check
   const userIds = enrolledUsers.map((u) => u.user_id);
-  const { markedUsers, setMarkedUsers } = useAttendanceCheck(eventId, userIds);
+  const { markedUsers } = useAttendanceCheck(eventId, userIds);
 
-  const handleMarkAttendance = async (uniqueCode: string, userName: string) => {
-    try {
-      setMarkingAttendance(uniqueCode);
-
-      // Get admin_id from session or local DB
-      let adminId = "";
-      const sessionUser = session?.user as { adminId?: string; userId?: string };
-      adminId = sessionUser?.adminId || sessionUser?.userId || "";
-
-      if (!adminId) {
-        const admins = await db.admins.toArray();
-        if (admins.length > 0) {
-          adminId = admins[0].admin_id;
-        }
+  const handleMarkAttendance = (uniqueCode: string, userName: string) => {
+    markAttendanceMutation.mutate(
+      { uniqueCode, userName },
+      {
+        onSuccess: () => {
+          toast.success(`Attendance marked for ${userName || uniqueCode}`, {
+            description: `Event: ${event?.name || eventId.slice(0, 8)}`,
+            icon: <CheckCircle className="h-4 w-4" />,
+          });
+        },
+        onError: (error) => {
+          toast.error("Failed to mark attendance", {
+            description: error instanceof Error ? error.message : "Unknown error occurred",
+          });
+        },
       }
-
-      if (!adminId) {
-        toast.error("Admin ID not found. Please log in again.");
-        return;
-      }
-
-      // Create attendance record
-      const attendanceRecord: Attendance = {
-        unique_code: uniqueCode,
-        event_id: eventId,
-        admin_id: adminId,
-        created_at: new Date().toISOString(),
-        _sync_status: "pending",
-      };
-
-      // Add to database
-      await db.attendance.add(attendanceRecord);
-
-      // Update marked users set
-      setMarkedUsers((prev) => new Set(prev).add(uniqueCode));
-
-      toast.success(`Attendance marked for ${userName || uniqueCode}`, {
-        description: `Event: ${event?.name || eventId.slice(0, 8)}`,
-        icon: <CheckCircle className="h-4 w-4" />,
-      });
-    } catch (error) {
-      console.error("Error marking attendance:", error);
-      toast.error("Failed to mark attendance", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-      });
-    } finally {
-      setMarkingAttendance(null);
-    }
+    );
   };
 
   if (eventLoading) {
@@ -130,10 +96,12 @@ export default function EventDetail({ eventId, onBack }: EventDetailProps) {
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-orange-700 dark:text-orange-400 flex items-center gap-2">
             <Calendar className="h-6 w-6" />
-            {event.name || "Event Details"}
+            {event.name || event.event_name || event.title || "Event Details"}
           </h2>
-          {event.description && (
-            <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+          {(event.description || event.event_description) && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {event.description || event.event_description}
+            </p>
           )}
         </div>
       </div>
@@ -255,59 +223,65 @@ export default function EventDetail({ eventId, onBack }: EventDetailProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayUsers.map((user) => (
-                    <TableRow
-                      key={user.user_id}
-                      className="hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-colors"
-                    >
-                      <TableCell className="font-mono text-sm font-semibold text-orange-600">
-                        {user.unique_code}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {user.name || (
-                          <span className="text-muted-foreground italic">No name</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">{user.email}</TableCell>
-                      <TableCell className="text-sm">
-                        {user.mobile_number || (
-                          <span className="text-muted-foreground italic">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {markedUsers.has(user.unique_code) ? (
-                          <Button
-                            size="sm"
-                            disabled
-                            variant="outline"
-                            className="border-green-300 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/30 cursor-not-allowed"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            Marked
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() => handleMarkAttendance(user.unique_code, user.name)}
-                            disabled={markingAttendance === user.unique_code}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {markingAttendance === user.unique_code ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Marking...
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-3 w-3" />
-                                Mark
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {displayUsers.map((user) => {
+                    const isMarking = markAttendanceMutation.isPending && 
+                                     markAttendanceMutation.variables?.uniqueCode === user.unique_code;
+                    const isMarked = markedUsers.has(user.unique_code);
+
+                    return (
+                      <TableRow
+                        key={user.user_id}
+                        className="hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-colors"
+                      >
+                        <TableCell className="font-mono text-sm font-semibold text-orange-600">
+                          {user.unique_code}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {user.name || (
+                            <span className="text-muted-foreground italic">No name</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">{user.email}</TableCell>
+                        <TableCell className="text-sm">
+                          {user.mobile_number || (
+                            <span className="text-muted-foreground italic">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isMarked ? (
+                            <Button
+                              size="sm"
+                              disabled
+                              variant="outline"
+                              className="border-green-300 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/30 cursor-not-allowed"
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              Marked
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleMarkAttendance(user.unique_code, user.name)}
+                              disabled={isMarking}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isMarking ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Marking...
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="h-3 w-3" />
+                                  Mark
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
 
