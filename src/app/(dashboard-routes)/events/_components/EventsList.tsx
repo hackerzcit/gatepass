@@ -19,7 +19,7 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
     syncMutation.mutate(undefined, {
       onSuccess: (data) => {
         toast.success("Sync completed successfully", {
-          description: `Events: ${data.counts?.events || 0}, Enrollments: ${data.counts?.enrollments || 0}`,
+          description: `Users: ${data.counts?.users || 0}, Events: ${data.counts?.events || 0}, Enrollments: ${data.counts?.enrollments || 0}`,
         });
       },
       onError: (error) => {
@@ -52,25 +52,27 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - Same style as Users Page */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-            Events
+            Event Management
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Select an event to view enrolled users and mark attendance
           </p>
         </div>
-        <Button
-          onClick={handleSync}
-          disabled={syncMutation.isPending}
-          variant="outline"
-          className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
-        >
-          <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-          {syncMutation.isPending ? "Syncing..." : "Sync Events"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleSync}
+            disabled={syncMutation.isPending}
+            variant="outline"
+            className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30 hover:text-orange-700"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+            {syncMutation.isPending ? "Syncing..." : "Sync Events"}
+          </Button>
+        </div>
       </div>
 
       {/* Events Grid */}
@@ -81,9 +83,17 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
             <h3 className="text-lg font-semibold text-orange-700 dark:text-orange-400 mb-2">
               No Events Found
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Sync data to load events from the server
             </p>
+            <Button
+              onClick={handleSync}
+              disabled={syncMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+              {syncMutation.isPending ? "Syncing..." : "Sync Now"}
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -122,11 +132,17 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
                   )}
                   
                   <div className="flex items-center justify-between pt-2 border-t border-orange-100">
-                   
+                    <span className="text-xs text-orange-600 font-mono">
+                      {event.event_id.slice(0, 8)}...
+                    </span>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        onEventSelect(event.event_id);
+                      }}
                     >
                       View Details
                       <ChevronRight className="h-4 w-4 ml-1" />
