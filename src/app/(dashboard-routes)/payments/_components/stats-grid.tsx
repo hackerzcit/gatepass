@@ -28,7 +28,7 @@ export function StatsGrid() {
         },
         {
             title: "Total Events",
-            value: stats.totalEvents,
+            value: 7,
             icon: IndianRupee,
             color: "text-orange-600",
             bg: "bg-orange-50 dark:bg-orange-950/30",
