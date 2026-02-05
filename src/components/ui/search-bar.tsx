@@ -23,7 +23,7 @@ export function SearchBar({
     if (searchValue === "") {
       onSearchChange("");
     }
-  }, [searchValue]);
+  }, [searchValue, onSearchChange]);
 
   const handleSearch = () => {
     // Always trigger search, even with empty value

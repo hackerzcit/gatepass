@@ -59,7 +59,7 @@ export default function DeclareWinnerPage() {
         if (eventIdParam && !selectedEvent) {
             setSelectedEvent(eventIdParam);
         }
-    }, [eventIdParam]);
+    }, [eventIdParam, selectedEvent]);
 
     // Handle winner loading when event changes or existing winners load
     useEffect(() => {

@@ -68,7 +68,7 @@ export function useMarkAttendance(eventId: string) {
             ? {
                 ...old,
                 markedUniqueCodes: new Set([
-                  ...old.markedUniqueCodes,
+                  ...Array.from(old.markedUniqueCodes),
                   uniqueCode,
                 ]),
               }
