@@ -3,59 +3,34 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Loader2, ChevronRight, Users, RefreshCw } from "lucide-react";
-import { useEventsList } from "../../_hooks/events-queries";
+import { useEventsList } from "../../../../module/events/queries";
+import { useSyncPull } from "../../../../module/events/mutation";
 import { toast } from "sonner";
-import { useState } from "react";
 
 interface EventsListProps {
   onEventSelect: (eventId: string) => void;
 }
 
 export default function EventsList({ onEventSelect }: EventsListProps) {
-  const { events, loading, error } = useEventsList();
-  const [syncing, setSyncing] = useState(false);
+  const { data: events = [], isLoading, error } = useEventsList();
+  const syncMutation = useSyncPull();
 
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
-      const tokenResponse = await fetch("/api/auth/get-token");
-      if (!tokenResponse.ok) {
-        toast.error("Failed to fetch access token");
-        return;
-      }
-
-      const { access_token } = await tokenResponse.json();
-      
-      // Call sync pull API
-      const syncResponse = await fetch('/api/sync/pull', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ access_token }),
-      });
-
-      if (!syncResponse.ok) {
-        throw new Error('Sync failed');
-      }
-
-      const result = await syncResponse.json();
-
-      toast.success("Sync completed successfully", {
-        description: `Events: ${result.counts?.events || 0}, Enrollments: ${result.counts?.enrollments || 0}`,
-      });
-      window.location.reload();
-    } catch (error) {
-      console.error("Error syncing:", error);
-      toast.error("Sync failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    } finally {
-      setSyncing(false);
-    }
+  const handleSync = () => {
+    syncMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        toast.success("Sync completed successfully", {
+          description: `Users: ${data.counts?.users || 0}, Events: ${data.counts?.events || 0}, Enrollments: ${data.counts?.enrollments || 0}`,
+        });
+      },
+      onError: (error) => {
+        toast.error("Sync failed", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      },
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-12 w-12 animate-spin text-orange-600" />
@@ -67,7 +42,9 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
     return (
       <Card className="border-2 border-red-200">
         <CardContent className="py-8">
-          <p className="text-center text-red-600">Error loading events: {error.message}</p>
+          <p className="text-center text-red-600">
+            Error loading events: {error.message}
+          </p>
         </CardContent>
       </Card>
     );
@@ -75,25 +52,27 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - Same style as Users Page */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-            Events
+            Event Management
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Select an event to view enrolled users and mark attendance
           </p>
         </div>
-        <Button
-          onClick={handleSync}
-          disabled={syncing}
-          variant="outline"
-          className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
-        >
-          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing..." : "Sync Events"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleSync}
+            disabled={syncMutation.isPending}
+            variant="outline"
+            className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30 hover:text-orange-700"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+            {syncMutation.isPending ? "Syncing..." : "Sync Events"}
+          </Button>
+        </div>
       </div>
 
       {/* Events Grid */}
@@ -104,9 +83,17 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
             <h3 className="text-lg font-semibold text-orange-700 dark:text-orange-400 mb-2">
               No Events Found
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Sync data to load events from the server
             </p>
+            <Button
+              onClick={handleSync}
+              disabled={syncMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+              {syncMutation.isPending ? "Syncing..." : "Sync Now"}
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -144,9 +131,6 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
                     </p>
                   )}
                   
-                  {/* Show all event properties for debugging */}
-                 
-                  
                   <div className="flex items-center justify-between pt-2 border-t border-orange-100">
                     <span className="text-xs text-orange-600 font-mono">
                       {event.event_id.slice(0, 8)}...
@@ -155,6 +139,10 @@ export default function EventsList({ onEventSelect }: EventsListProps) {
                       size="sm"
                       variant="ghost"
                       className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        onEventSelect(event.event_id);
+                      }}
                     >
                       View Details
                       <ChevronRight className="h-4 w-4 ml-1" />
