@@ -5,8 +5,7 @@ import { db } from './dexie'
 import type { User, Event, Enrollment, Payment } from './dexie'
 
 // Backend API base URL (adjust as needed or use environment variable)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hackerz-app-backend-new-production.up.railway.app'
 /**
  * Response type from the backend /sync/pull endpoint
  */
