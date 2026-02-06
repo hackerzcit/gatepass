@@ -1,3 +1,6 @@
+// next.config.mjs
+import withPWA from 'next-pwa';
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -7,6 +10,13 @@ const nextConfig = {
       },
     ],
   },
+  reactStrictMode: true,
 };
 
-export default nextConfig;
+const pwaConfig =  withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+});
+
+export default pwaConfig(nextConfig);

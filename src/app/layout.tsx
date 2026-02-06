@@ -15,32 +15,33 @@ export const metadata: Metadata = {
     process.env.APP_URL
       ? `${process.env.APP_URL}`
       : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : `http://localhost:${process.env.PORT || 3000}`
+        ? `https://${process.env.VERCEL_URL}`
+        : `http://localhost:${process.env.PORT || 3000}`,
   ),
   title: "Hackerz GatePass",
   description:
     "A powerful and intuitive learning management system for managing courses, students, and educational content.",
+  manifest: "/manifest.json",
   alternates: {
-    canonical: "/"
+    canonical: "/",
   },
   openGraph: {
     url: "/",
     title: "Hackerz GatePass",
     description:
       "A powerful and intuitive learning management system for managing courses, students, and educational content.",
-    type: "website"
+    type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Hackerz GatePass",
     description:
-      "A powerful and intuitive learning management system for managing courses, students, and educational content."
-  }
+      "A powerful and intuitive learning management system for managing courses, students, and educational content.",
+  },
 };
 
 export default function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
@@ -50,15 +51,13 @@ export default function RootLayout({
         <link rel="icon" href="/icon.ico" />
       </head>
       <body className={GeistSans.className}>
-          <AuthProvider>
-            <QueryProvider>
-              <TooltipProvider>
-                <OfflineProvider>
-                  {children}
-                </OfflineProvider>
-              </TooltipProvider>
-            </QueryProvider>
-          </AuthProvider>
+        <AuthProvider>
+          <QueryProvider>
+            <TooltipProvider>
+              <OfflineProvider>{children}</OfflineProvider>
+            </TooltipProvider>
+          </QueryProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

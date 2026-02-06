@@ -1,75 +1,101 @@
 /**
- * Service worker for offline support.
- * - Caches pages and static assets when visited online.
- * - When offline, serves cached content so the app still loads.
- * User must visit the site at least once while online for offline to work.
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-const CACHE_NAME = "hackerz-gatepass-v1";
 
-function isSameOrigin(url) {
-  try {
-    return new URL(url).origin === self.location.origin;
-  } catch {
-    return false;
-  }
-}
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  let registry = {};
 
-function shouldCache(request) {
-  const url = request.url;
-  if (!isSameOrigin(url)) return false;
-  const path = new URL(url).pathname;
-  if (path.startsWith("/api/")) return false;
-  if (request.mode === "navigate") return true;
-  return (
-    path.startsWith("/_next/static/") ||
-    path.endsWith(".js") ||
-    path.endsWith(".css") ||
-    path.endsWith(".ico") ||
-    path.endsWith(".svg")
-  );
-}
+  // Used for `eval` and `importScripts` where we can't get script URL by other means.
+  // In both cases, it's safe to use a global var because those functions are synchronous.
+  let nextDefineUri;
 
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = request.url;
-
-  if (request.mode !== "navigate" && request.mode !== "same-origin") {
-    return;
-  }
-  if (!isSameOrigin(url) || !shouldCache(request)) return;
-
-  event.respondWith(
-    (async () => {
-      try {
-        const networkResponse = await fetch(request);
-        if (networkResponse && networkResponse.status === 200) {
-          const cache = await caches.open(CACHE_NAME);
-          const clone = networkResponse.clone();
-          cache.put(request, clone);
+  const singleRequire = (uri, parentUri) => {
+    uri = new URL(uri + ".js", parentUri).href;
+    return registry[uri] || (
+      
+        new Promise(resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = uri;
+            script.onload = resolve;
+            document.head.appendChild(script);
+          } else {
+            nextDefineUri = uri;
+            importScripts(uri);
+            resolve();
+          }
+        })
+      
+      .then(() => {
+        let promise = registry[uri];
+        if (!promise) {
+          throw new Error(`Module ${uri} didn’t register its module`);
         }
-        return networkResponse;
-      } catch {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        if (request.mode === "navigate") {
-          return caches.match("/").then((r) => r || new Response(
-            "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Offline</title></head><body style=\"font-family:system-ui;padding:2rem;text-align:center;\"><h1>You're offline</h1><p>Open this app again when you have internet, or try again in a moment.</p></body></html>",
-            { headers: { "Content-Type": "text/html" } }
-          ));
+        return promise;
+      })
+    );
+  };
+
+  self.define = (depsNames, factory) => {
+    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    if (registry[uri]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    let exports = {};
+    const require = depUri => singleRequire(depUri, uri);
+    const specialDeps = {
+      module: { uri },
+      exports,
+      require
+    };
+    registry[uri] = Promise.all(depsNames.map(
+      depName => specialDeps[depName] || require(depName)
+    )).then(deps => {
+      factory(...deps);
+      return exports;
+    });
+  };
+}
+define(['./workbox-e43f5367'], (function (workbox) { 'use strict';
+
+  importScripts();
+  self.skipWaiting();
+  workbox.clientsClaim();
+  workbox.registerRoute("/", new workbox.NetworkFirst({
+    "cacheName": "start-url",
+    plugins: [{
+      cacheWillUpdate: async ({
+        request,
+        response,
+        event,
+        state
+      }) => {
+        if (response && response.type === 'opaqueredirect') {
+          return new Response(response.body, {
+            status: 200,
+            statusText: 'OK',
+            headers: response.headers
+          });
         }
-        throw new Error("Offline");
+        return response;
       }
-    })()
-  );
-});
+    }]
+  }), 'GET');
+  workbox.registerRoute(/.*/i, new workbox.NetworkOnly({
+    "cacheName": "dev",
+    plugins: []
+  }), 'GET');
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
-});
+}));
+//# sourceMappingURL=sw.js.map
