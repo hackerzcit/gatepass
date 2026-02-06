@@ -4,6 +4,7 @@ import { ContentLayout } from "@/components/admin-panel/content-layout";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 import { useAnalyticsDashboard } from "../../_hooks/analytics-queries";
@@ -17,11 +18,12 @@ import {
 
 export default function AnalyticsDashboardPage() {
   const sidebar = useStore(useSidebar, (x) => x);
+  const isOnline = useOnlineStatus();
   const { data, loading, error, refetch } = useAnalyticsDashboard();
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    if (isOnline) refetch();
+  }, [isOnline, refetch]);
 
   if (!sidebar) return null;
 

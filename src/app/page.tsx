@@ -34,6 +34,10 @@ export default function HomePage() {
       setError("Please enter your admin email.");
       return;
     }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError("You are offline. Connect to the internet to sign in.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${BACKEND_URL}/admin/login`, {

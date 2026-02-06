@@ -135,6 +135,10 @@ export function useSyncPushAttendance() {
         return { success: true, synced_count: 0 };
       }
 
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("You are offline. Data will sync when back online.");
+      }
+
       const API_BASE_URL =
         process.env.NEXT_PUBLIC_BACKEND_API_URL ||
         process.env.NEXT_PUBLIC_API_URL ||
@@ -187,6 +191,10 @@ export function useSyncPushEntryLogs() {
 
       if (pending.length === 0) {
         return { success: true, synced_count: 0 };
+      }
+
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("You are offline. Data will sync when back online.");
       }
 
       const API_BASE_URL =

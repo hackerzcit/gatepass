@@ -52,4 +52,14 @@ export const axiosBackendInstance = axios.create({
   }
 });
 
+// Block backend API requests when offline so we don't fire failed network calls
+axiosBackendInstance.interceptors.request.use((config) => {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return Promise.reject(
+      new Error("You are offline. Data will sync when back online.")
+    );
+  }
+  return config;
+});
+
 export default axiosInstance;

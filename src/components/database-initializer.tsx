@@ -24,6 +24,10 @@ export function DatabaseInitializer() {
           const result = await initializeAppDB()
           if (result.success) {
             console.log('✅ Database initialized successfully')
+            if (!navigator.onLine) {
+              console.log('⏭️ Skipping initial sync (offline); using local data')
+              return
+            }
             try {
               console.log('🔄 Performing initial data sync...')
               const syncResult = await syncPull(undefined)
