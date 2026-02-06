@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import QueryProvider from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { OfflineProvider } from "@/components/offline-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -52,7 +53,9 @@ export default function RootLayout({
           <AuthProvider>
             <QueryProvider>
               <TooltipProvider>
-                {children}
+                <OfflineProvider>
+                  {children}
+                </OfflineProvider>
               </TooltipProvider>
             </QueryProvider>
           </AuthProvider>
