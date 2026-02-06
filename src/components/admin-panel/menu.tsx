@@ -16,6 +16,7 @@ import {
   TooltipProvider
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 interface MenuProps {
   isOpen: boolean | undefined;
@@ -23,6 +24,7 @@ interface MenuProps {
 
 export function Menu({ isOpen }: MenuProps) {
   const pathname = usePathname();
+  const isOnline = useOnlineStatus();
   const { signOut } = useAuth();
   const menuList = getMenuList(pathname);
 
@@ -70,7 +72,7 @@ export function Menu({ isOpen }: MenuProps) {
                               className="w-full justify-start h-10 mb-1"
                               asChild
                             >
-                              <Link href={href}>
+                              <Link href={href} prefetch={isOnline}>
                                 <span
                                   className={cn(isOpen === false ? "" : "mr-4")}
                                 >
@@ -109,6 +111,7 @@ export function Menu({ isOpen }: MenuProps) {
                         }
                         submenus={submenus}
                         isOpen={isOpen}
+                        prefetch={isOnline}
                       />
                     </div>
                   )

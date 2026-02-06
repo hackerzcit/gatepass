@@ -4,12 +4,14 @@ import { SidebarToggle } from "@/components/admin-panel/sidebar-toggle";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useStore } from "@/hooks/use-store";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import Image from "next/image";
 
 export function Sidebar() {
   const sidebar = useStore(useSidebar, (x) => x);
+  const isOnline = useOnlineStatus();
   if (!sidebar) return null;
   const { isOpen, toggleOpen, getOpenState, setIsHover, settings } = sidebar;
   return (
@@ -34,7 +36,7 @@ export function Sidebar() {
           variant="link"
           asChild
         >
-          <Link href="/users" className="flex items-center gap-2">
+          <Link href="/users" className="flex items-center gap-2" prefetch={isOnline}>
             <Image src="/logo.svg" alt="Logo" width={24} height={24} />
             <h1
               className={cn(

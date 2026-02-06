@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Menu } from "@/components/admin-panel/menu";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import {
   Sheet,
   SheetHeader,
@@ -13,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 
 export function SheetMenu() {
+  const isOnline = useOnlineStatus();
   return (
     <Sheet>
       <SheetTrigger className="lg:hidden" asChild>
@@ -27,7 +31,7 @@ export function SheetMenu() {
             variant="link"
             asChild
           >
-            <Link href="/users" className="flex items-center gap-2">
+            <Link href="/users" className="flex items-center gap-2" prefetch={isOnline}>
               <Image src="/logo.svg" alt="Logo" width={24} height={24} />
               <SheetTitle className="font-bold text-lg">
                 <span className="text-secondary">Hackerz</span>

@@ -40,6 +40,7 @@ interface CollapseMenuButtonProps {
   active: boolean;
   submenus: Submenu[];
   isOpen: boolean | undefined;
+  prefetch?: boolean;
 }
 
 export function CollapseMenuButton({
@@ -47,7 +48,8 @@ export function CollapseMenuButton({
   label,
   active,
   submenus,
-  isOpen
+  isOpen,
+  prefetch = true
 }: CollapseMenuButtonProps) {
   const pathname = usePathname();
   const isSubmenuActive = submenus.some((submenu) =>
@@ -113,7 +115,7 @@ export function CollapseMenuButton({
             className="w-full justify-start h-10 mb-1"
             asChild
           >
-            <Link href={href}>
+            <Link href={href} prefetch={prefetch}>
               <span className="mr-4 ml-2">
                 <Dot size={18} />
               </span>
@@ -178,6 +180,7 @@ export function CollapseMenuButton({
                 "bg-secondary"
               }`}
               href={href}
+              prefetch={prefetch}
             >
               <p className="max-w-[180px] truncate">{label}</p>
             </Link>
