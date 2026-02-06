@@ -5,7 +5,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { db, initDB } from "@/db";
 import type { Admin } from "@/db";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,10 +16,16 @@ const BACKEND_URL =
 
 export default function HomePage() {
   const router = useRouter();
-  const { setAdmin } = useAuth();
+  const { admin, isReady, setAdmin } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isReady && admin) {
+      router.replace("/users");
+    }
+  }, [isReady, admin, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +91,10 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  if (isReady && admin) {
+    return null;
+  }
 
   return (
     <AuthLayout>
