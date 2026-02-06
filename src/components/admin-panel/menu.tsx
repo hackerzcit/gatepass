@@ -15,7 +15,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from "@/components/ui/tooltip";
-import { signOut } from "next-auth/react";
+import { useAuth } from "@/components/providers/auth-provider";
 
 interface MenuProps {
   isOpen: boolean | undefined;
@@ -23,6 +23,7 @@ interface MenuProps {
 
 export function Menu({ isOpen }: MenuProps) {
   const pathname = usePathname();
+  const { signOut } = useAuth();
   const menuList = getMenuList(pathname);
 
   return (

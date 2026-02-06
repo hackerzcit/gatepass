@@ -17,18 +17,7 @@ export function SyncActionsCard() {
     try {
       setSyncing(true);
       toast.info("Starting sync from server...");
-
-      // Fetch access token
-      const tokenResponse = await fetch("/api/auth/get-token");
-      if (!tokenResponse.ok) {
-        toast.error("Failed to fetch access token");
-        return;
-      }
-
-      const { access_token } = await tokenResponse.json();
-
-      // Perform sync
-      const result = await syncPull(access_token);
+      const result = await syncPull(undefined);
 
       if (result.success) {
         toast.success("Sync completed successfully!", {
@@ -58,18 +47,7 @@ export function SyncActionsCard() {
     try {
       setPushing(true);
       toast.info("Starting push sync to server...");
-
-      // Fetch access token
-      const tokenResponse = await fetch("/api/auth/get-token");
-      if (!tokenResponse.ok) {
-        toast.error("Failed to fetch access token");
-        return;
-      }
-
-      const { access_token } = await tokenResponse.json();
-
-      // Perform push sync
-      const result = await syncPush(access_token);
+      const result = await syncPush(undefined);
 
       if (result.success) {
         const { users, entries, attendance } = result.counts || {

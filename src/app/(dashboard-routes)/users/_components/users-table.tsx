@@ -22,14 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, UserCircle, Mail, Phone, Hash, QrCode, LogIn, CheckCircle, School, Info, Calendar, Building, Users as UsersIcon } from "lucide-react";
 import { useUsersSearch } from "../../_hooks/queries";
 import { db, type EntryLog, type User, pushSingleEntryLog } from "@/db";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 
 export function UsersTable() {
   const { users, loading, searchQuery, setSearchQuery } = useUsersSearch();
-  const { data: session } = useSession();
+  const { admin } = useAuth();
   const isOnline = useOnlineStatus();
   const [markingEntry, setMarkingEntry] = useState<string | null>(null);
   const [markedUsers, setMarkedUsers] = useState<Set<string>>(new Set());
@@ -58,19 +58,7 @@ export function UsersTable() {
     try {
       setMarkingEntry(uniqueCode);
 
-      // Get admin_id from session or local DB
-      let adminId = "";
-      const sessionUser = session?.user as { adminId?: string; userId?: string };
-      adminId = sessionUser?.adminId || sessionUser?.userId || "";
-
-      // If not in session, try to get from local DB
-      if (!adminId) {
-        const admins = await db.admins.toArray();
-        if (admins.length > 0) {
-          adminId = admins[0].admin_id;
-        }
-      }
-
+      const adminId = admin?.admin_id;
       if (!adminId) {
         toast.error("Admin ID not found. Please log in again.");
         return;
@@ -96,29 +84,15 @@ export function UsersTable() {
       if (isOnline) {
         console.log("📤 Attempting immediate push of entry log...");
         try {
-          // Get access token
-          const tokenResponse = await fetch("/api/auth/get-token");
-          if (tokenResponse.ok) {
-            const { access_token } = await tokenResponse.json();
-            
-            // Push entry log to backend
-            const pushResult = await pushSingleEntryLog(entryLogId as number, access_token);
-            
-            if (pushResult.success) {
-              console.log("✅ Entry log synced immediately");
-              toast.success(`Entry marked for ${userName || uniqueCode}`, {
-                description: "Synced to server successfully",
-                icon: <CheckCircle className="h-4 w-4" />,
-              });
-            } else {
-              console.warn("⚠️ Immediate push failed, will sync later:", pushResult.error);
-              toast.success(`Entry marked for ${userName || uniqueCode}`, {
-                description: "Saved locally, will sync later",
-                icon: <CheckCircle className="h-4 w-4" />,
-              });
-            }
+          const pushResult = await pushSingleEntryLog(entryLogId as number, undefined);
+          if (pushResult.success) {
+            console.log("✅ Entry log synced immediately");
+            toast.success(`Entry marked for ${userName || uniqueCode}`, {
+              description: "Synced to server successfully",
+              icon: <CheckCircle className="h-4 w-4" />,
+            });
           } else {
-            console.warn("⚠️ Failed to get access token, will sync later");
+            console.warn("⚠️ Immediate push failed, will sync later:", pushResult.error);
             toast.success(`Entry marked for ${userName || uniqueCode}`, {
               description: "Saved locally, will sync later",
               icon: <CheckCircle className="h-4 w-4" />,

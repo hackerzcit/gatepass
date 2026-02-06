@@ -2,10 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { UserPlus, RefreshCw, Loader2, CheckCircle, Copy } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { syncPull, db, type Admin, type CodeBlock, type User, type EntryLog } from "@/db";
 import { toast } from "sonner";
-import { useSession } from "next-auth/react";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { axiosBackendInstance } from "@/lib/axios-instance";
 import {
@@ -27,7 +26,6 @@ import {
 } from "@/components/ui/select";
 
 export function PageHeader() {
-  const { data: session } = useSession();
   const isOnline = useOnlineStatus();
   const [syncing, setSyncing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -163,15 +161,6 @@ export function PageHeader() {
   const pushUserToBackend = async (user: Partial<User>, adminId: string) => {
     try {
       console.log("📤 Pushing user to backend...", user.unique_code);
-      
-      // Get access token
-      const tokenResponse = await fetch("/api/auth/get-token");
-      if (!tokenResponse.ok) {
-        throw new Error("Failed to get access token");
-      }
-      const { access_token } = await tokenResponse.json();
-
-      // Push user to backend using axios instance
       const response = await axiosBackendInstance.post('/users/onspot-register', {
         unique_code: user.unique_code,
         admin_id: adminId,
@@ -182,10 +171,6 @@ export function PageHeader() {
         gender: user.gender,
         year: user.year,
         college: user.college,
-      }, {
-        headers: {
-          "Authorization": `Bearer ${access_token}`,
-        }
       });
 
       console.log("✅ User pushed to backend successfully:", response.data);
@@ -317,18 +302,7 @@ export function PageHeader() {
   const handleSync = async () => {
     try {
       setSyncing(true);
-
-      // Fetch access token
-      const tokenResponse = await fetch("/api/auth/get-token");
-      if (!tokenResponse.ok) {
-        toast.error("Failed to fetch access token");
-        return;
-      }
-
-      const { access_token } = await tokenResponse.json();
-
-      // Perform sync
-      const result = await syncPull(access_token);
+      const result = await syncPull(undefined);
 
       if (result.success) {
         toast.success("Sync completed successfully", {

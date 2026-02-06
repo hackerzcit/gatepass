@@ -1,20 +1,89 @@
-'use client'
+"use client";
 
 import { AuthLayout } from "@/components/auth-layout";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
+import { db, initDB } from "@/db";
+import type { Admin } from "@/db";
 import { useRouter } from "next/navigation";
-import GoogleLoginButton from "@/components/admin-panel/google-login-button";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+  "https://hackerz-app-backend-new-production.up.railway.app";
 
 export default function HomePage() {
   const router = useRouter();
+  const { setAdmin } = useAuth();
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    router.prefetch("/users");
-  }, [router]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim()) {
+      setError("Please enter your admin email.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_email: email.trim() }),
+      });
+      const json = await res.json().catch(() => ({}));
 
-  const handleGoogleError = (errorMessage: string) => {
-    setError(errorMessage);
+      if (!res.ok || !json?.success || !json?.data) {
+        setError(json?.message || "Login failed. Check your email or try again.");
+        setLoading(false);
+        return;
+      }
+
+      const data = json.data as {
+        admin_id: string;
+        name: string;
+        email: string;
+        created_at: string;
+        code_block?: Admin["code_block"];
+      };
+
+      const defaultCodeBlock: Admin["code_block"] = {
+        id: "",
+        admin_id: data.admin_id,
+        range_start: 0,
+        range_end: 0,
+        current_value: 0,
+        updated_at: new Date().toISOString(),
+      };
+      const adminForDb: Admin = {
+        admin_id: data.admin_id,
+        name: data.name,
+        email: data.email,
+        created_at: data.created_at,
+        code_block: data.code_block ?? defaultCodeBlock,
+      };
+
+      await initDB();
+      await db.admins.put(adminForDb);
+
+      setAdmin({
+        admin_id: data.admin_id,
+        name: data.name,
+        email: data.email,
+        created_at: data.created_at,
+        code_block: data.code_block ?? defaultCodeBlock,
+      });
+
+      router.push("/users");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,15 +96,29 @@ export default function HomePage() {
           </p>
         </div>
         {error && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             {error}
           </div>
         )}
-
-        <GoogleLoginButton
-          callbackUrl={"/users"}
-          onError={handleGoogleError}
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="admin_email">Admin email</Label>
+            <Input
+              id="admin_email"
+              name="admin_email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              className="w-full"
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
       </div>
     </AuthLayout>
   );

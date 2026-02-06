@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { db, syncPull } from "@/db"; // Import syncPull from your db file
 import type {
   Attendance,
@@ -16,7 +16,7 @@ import { queryKeys } from "./queries";
 // ============================================================
 export function useMarkAttendance(eventId: string) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const { admin } = useAuth();
 
   return useMutation<
   Attendance & { userName: string },
@@ -26,18 +26,9 @@ export function useMarkAttendance(eventId: string) {
 >({
 
     mutationFn: async ({ uniqueCode, userName }) => {
-      let adminId =
-        (session?.user as any)?.adminId ||
-        (session?.user as any)?.userId ||
-        "";
-
+      const adminId = admin?.admin_id;
       if (!adminId) {
-        const admins = await db.admins.toArray();
-        adminId = admins[0]?.admin_id;
-      }
-
-      if (!adminId) {
-        throw new Error("Admin ID not found");
+        throw new Error("Admin ID not found. Please log in again.");
       }
 
       const record: Attendance = {
@@ -105,21 +96,7 @@ export function useSyncPull() {
 
   return useMutation({
     mutationFn: async () => {
-      // Get access token
-      const tokenRes = await fetch("/api/auth/get-token", {
-        method: "GET",
-      });
-
-      if (!tokenRes.ok) {
-        const errorText = await tokenRes.text();
-        console.error("Token fetch failed:", tokenRes.status, errorText);
-        throw new Error("Failed to fetch access token");
-      }
-
-      const { access_token } = await tokenRes.json();
-
-      // Use the existing syncPull function directly
-      const result = await syncPull(access_token);
+      const result = await syncPull(undefined);
 
       if (!result.success) {
         throw new Error(result.error || "Sync failed");
@@ -158,25 +135,16 @@ export function useSyncPushAttendance() {
         return { success: true, synced_count: 0 };
       }
 
-      const tokenRes = await fetch("/api/auth/get-token", {
-        method: "GET",
-      });
-
-      if (!tokenRes.ok) throw new Error("Failed to fetch access token");
-
-      const { access_token } = await tokenRes.json();
-
-      // Call backend directly
       const API_BASE_URL =
+        process.env.NEXT_PUBLIC_BACKEND_API_URL ||
         process.env.NEXT_PUBLIC_API_URL ||
         "https://hackerz-app-backend-new-production.up.railway.app";
 
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+
       const res = await fetch(`${API_BASE_URL}/sync/push-attendance`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-        },
+        headers,
         body: JSON.stringify({ attendance: pending }),
       });
 
@@ -221,25 +189,16 @@ export function useSyncPushEntryLogs() {
         return { success: true, synced_count: 0 };
       }
 
-      const tokenRes = await fetch("/api/auth/get-token", {
-        method: "GET",
-      });
-
-      if (!tokenRes.ok) throw new Error("Failed to fetch access token");
-
-      const { access_token } = await tokenRes.json();
-
-      // Call backend directly
       const API_BASE_URL =
+        process.env.NEXT_PUBLIC_BACKEND_API_URL ||
         process.env.NEXT_PUBLIC_API_URL ||
         "https://hackerz-app-backend-new-production.up.railway.app";
 
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+
       const res = await fetch(`${API_BASE_URL}/sync/push-entry-logs`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access_token}`,
-        },
+        headers,
         body: JSON.stringify({ entry_logs: pending }),
       });
 

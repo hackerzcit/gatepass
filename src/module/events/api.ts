@@ -56,15 +56,7 @@ import type {
     // ============================================================
   
     async getAccessToken(): Promise<TokenResponse> {
-      const response = await this.fetch<TokenResponse>('/api/auth/get-token', {
-        method: 'POST',
-      });
-  
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to get access token');
-      }
-  
-      return response.data;
+      return { access_token: '' };
     }
   
     // ============================================================
