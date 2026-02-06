@@ -13,10 +13,13 @@ const nextConfig = {
   reactStrictMode: true,
 };
 
-const pwaConfig =  withPWA({
+// cacheOnFrontEndNav: cache RSC payloads when using client-side nav so Events/Payments/Winners work offline after visit.
+// Production build uses default runtimeCaching (NetworkFirst for same-origin pages). Dev build uses NetworkOnly — use `pnpm build` for offline.
+const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
+  cacheOnFrontEndNav: true,
 });
 
 export default pwaConfig(nextConfig);
