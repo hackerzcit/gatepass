@@ -29,23 +29,38 @@ import {
     XCircle,
     Pencil,
 } from "lucide-react";
-import { useWinnersSearch, useWinnersEvents } from "@/module/winners/queries";
 import { useRemoveWinner } from "@/module/winners/mutations";
 import { Badge } from "@/components/ui/badge";
 import { EnrichedWinner } from "@/module/winners/types";
 import Link from "next/link";
 
-export function WinnersTable() {
-    const {
-        winners,
-        loading,
-        searchQuery,
-        setSearchQuery,
-        eventFilter,
-        setEventFilter,
-    } = useWinnersSearch();
+interface EventOption {
+    event_id: string;
+    name?: string;
+    event_name?: string;
+}
 
-    const { events, loading: loadingEvents } = useWinnersEvents();
+interface WinnersTableProps {
+    winners: EnrichedWinner[];
+    loading: boolean;
+    searchQuery: string;
+    setSearchQuery: (q: string) => void;
+    eventFilter: string;
+    setEventFilter: (v: string) => void;
+    events: EventOption[];
+    loadingEvents: boolean;
+}
+
+export function WinnersTable({
+    winners,
+    loading,
+    searchQuery,
+    setSearchQuery,
+    eventFilter,
+    setEventFilter,
+    events,
+    loadingEvents,
+}: WinnersTableProps) {
     const removeWinnerMutation = useRemoveWinner();
 
     const getRankBadge = (rank: number) => {

@@ -1,10 +1,16 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Trophy, Plus } from "lucide-react";
+import { Trophy, Plus, FileSpreadsheet, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-export function PageHeader() {
+interface PageHeaderProps {
+    onExport?: () => void;
+    exportLoading?: boolean;
+    exportDisabled?: boolean;
+}
+
+export function PageHeader({ onExport, exportLoading, exportDisabled }: PageHeaderProps) {
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -18,6 +24,21 @@ export function PageHeader() {
             </div>
 
             <div className="flex items-center gap-3">
+                {onExport && (
+                    <Button
+                        variant="outline"
+                        onClick={onExport}
+                        disabled={exportLoading || exportDisabled}
+                        className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/30"
+                    >
+                        {exportLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <FileSpreadsheet className="h-4 w-4" />
+                        )}
+                        Export to Excel
+                    </Button>
+                )}
                 <Link href="/winners/declare">
                     <Button className="bg-orange-600 hover:bg-orange-700 text-white gap-2">
                         <Plus className="h-4 w-4" />
