@@ -42,6 +42,26 @@ const startUrlWithTimeout = {
   },
 };
 
+// Same-origin page navigations: 3s timeout so after kill app → open PWA offline we load from cache fast
+// (covers /users, /attendance, etc. when PWA opens to last URL; uses same "others" cache as default).
+const navigateFastTimeout = {
+  urlPattern: ({ request, url }) => {
+    if (request.mode !== 'navigate') return false;
+    if (url.origin !== self.origin) return false;
+    if (url.pathname.startsWith('/api')) return false;
+    return true;
+  },
+  handler: 'NetworkFirst',
+  options: {
+    cacheName: 'others',
+    networkTimeoutSeconds: 3,
+    expiration: {
+      maxEntries: 32,
+      maxAgeSeconds: 24 * 60 * 60,
+    },
+  },
+};
+
 // cacheOnFrontEndNav: cache RSC payloads when using client-side nav so Events/Payments/Winners work offline after visit.
 // Dev uses NetworkOnly for non-start URLs; production uses NetworkFirst for same-origin.
 const pwaConfig = withPWA({
@@ -53,7 +73,7 @@ const pwaConfig = withPWA({
   fallbacks: {
     document: '/~offline',
   },
-  runtimeCaching: [startUrlWithTimeout, ...defaultCache],
+  runtimeCaching: [startUrlWithTimeout, navigateFastTimeout, ...defaultCache],
 });
 
 export default pwaConfig(nextConfig);
