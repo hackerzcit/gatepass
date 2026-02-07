@@ -40,7 +40,10 @@
   * {
     @apply border-border;
   }
+  html,
   body {
+    /* Disable pull-to-refresh on mobile so reload doesn't trigger "offline" state */
+    overscroll-behavior-y: none;
     @apply bg-background text-foreground;
   }
 }
