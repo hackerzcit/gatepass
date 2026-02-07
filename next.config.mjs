@@ -17,13 +17,17 @@ const nextConfig = {
   reactStrictMode: true,
 };
 
-// Start URL with short network timeout so when PWA is reopened offline we serve from cache quickly
-// instead of waiting for the network to fail (which can show "You're offline" before the SW responds).
-const startUrlWithTimeout = {
-  urlPattern: '/',
+// Comprehensive navigation caching (includes start URL and all pages)
+const navigationCache = {
+  urlPattern: ({ request, url }) => {
+    if (request.mode !== 'navigate') return false;
+    if (url.origin !== self.origin) return false;
+    if (url.pathname.startsWith('/api')) return false;
+    return true;
+  },
   handler: 'NetworkFirst',
   options: {
-    cacheName: 'start-url',
+    cacheName: 'pages',
     networkTimeoutSeconds: 3,
     plugins: [
       {
@@ -39,41 +43,60 @@ const startUrlWithTimeout = {
         },
       },
     ],
+    expiration: {
+      maxEntries: 50,
+      maxAgeSeconds: 24 * 60 * 60, // 24 hours
+    },
   },
 };
 
-// Same-origin page navigations: 3s timeout so after kill app → open PWA offline we load from cache fast
-// (covers /users, /attendance, etc. when PWA opens to last URL; uses same "others" cache as default).
-const navigateFastTimeout = {
-  urlPattern: ({ request, url }) => {
-    if (request.mode !== 'navigate') return false;
-    if (url.origin !== self.origin) return false;
-    if (url.pathname.startsWith('/api')) return false;
-    return true;
+// Cache Next.js RSC data payloads
+const rscCache = {
+  urlPattern: ({ url, request }) => {
+    return url.pathname.startsWith('/_next/data/') || 
+           request.headers.get('RSC') === '1' ||
+           request.headers.get('Next-Router-Prefetch') === '1';
   },
   handler: 'NetworkFirst',
   options: {
-    cacheName: 'others',
+    cacheName: 'next-data',
     networkTimeoutSeconds: 3,
     expiration: {
-      maxEntries: 32,
+      maxEntries: 100,
       maxAgeSeconds: 24 * 60 * 60,
     },
   },
 };
 
-// cacheOnFrontEndNav: cache RSC payloads when using client-side nav so Events/Payments/Winners work offline after visit.
-// Dev uses NetworkOnly for non-start URLs; production uses NetworkFirst for same-origin.
+// Cache Next.js static files
+const nextStaticCache = {
+  urlPattern: ({ url }) => url.pathname.startsWith('/_next/static/'),
+  handler: 'CacheFirst',
+  options: {
+    cacheName: 'next-static',
+    expiration: {
+      maxEntries: 200,
+      maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+    },
+  },
+};
+
 const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
   cacheOnFrontEndNav: true,
-  dynamicStartUrl: false, // we provide start-url rule above with networkTimeoutSeconds
+  dynamicStartUrl: false,
+  disable: process.env.NODE_ENV === 'development', // Disable in dev for easier testing
   fallbacks: {
     document: '/~offline',
   },
-  runtimeCaching: [startUrlWithTimeout, navigateFastTimeout, ...defaultCache],
+  runtimeCaching: [
+    nextStaticCache,  // Static assets first (most specific)
+    navigationCache,  // Navigation requests
+    rscCache,         // RSC data
+    ...defaultCache,  // Default cache rules last
+  ],
 });
 
 export default pwaConfig(nextConfig);
