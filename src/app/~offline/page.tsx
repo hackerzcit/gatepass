@@ -33,6 +33,9 @@ export default function OfflineFallbackPage() {
           <p className="max-w-sm text-sm text-muted-foreground">
             Open the app when you have connection first so it can be cached. Then you can close and reopen it offline to use your local data.
           </p>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            If you saw the browser&apos;s plain &quot;You&apos;re offline&quot; page instead of this one, the service worker was stopped. Try opening the app once while online, then go offline and <strong>reload</strong> or open the app again.
+          </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link

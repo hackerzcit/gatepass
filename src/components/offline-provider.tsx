@@ -15,8 +15,6 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
         if (cancelled) return;
-        // On first install, wait for the SW to activate so precache completes.
-        // That way when the user closes and reopens offline, the SW can serve cached "/" and "/~offline".
         if (reg.installing) {
           reg.installing.addEventListener("statechange", function onState() {
             if (reg.installing?.state === "activated") {
