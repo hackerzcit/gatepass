@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url);
 const defaultCache = require('next-pwa/cache');
 
 const nextConfig = {
+  reactStrictMode: true,
   images: {
     remotePatterns: [
       {
@@ -14,53 +15,30 @@ const nextConfig = {
       },
     ],
   },
-  reactStrictMode: true,
 };
 
-// Comprehensive navigation caching (includes start URL and all pages)
+// 🔥 Navigation: MUST be CacheFirst
 const navigationCache = {
-  urlPattern: ({ request, url }) => {
-    if (request.mode !== 'navigate') return false;
-    if (url.origin !== self.origin) return false;
-    if (url.pathname.startsWith('/api')) return false;
-    return true;
-  },
-  handler: 'NetworkFirst',
+  urlPattern: ({ request }) => request.mode === 'navigate',
+  handler: 'CacheFirst',
   options: {
     cacheName: 'pages',
-    networkTimeoutSeconds: 3,
-    plugins: [
-      {
-        cacheWillUpdate: async ({ response }) => {
-          if (response && response.type === 'opaqueredirect') {
-            return new Response(response.body, {
-              status: 200,
-              statusText: 'OK',
-              headers: response.headers,
-            });
-          }
-          return response;
-        },
-      },
-    ],
     expiration: {
       maxEntries: 50,
-      maxAgeSeconds: 24 * 60 * 60, // 24 hours
+      maxAgeSeconds: 24 * 60 * 60,
     },
   },
 };
 
-// Cache Next.js RSC data payloads
+// 🔥 RSC / Next.js data: MUST be CacheFirst
 const rscCache = {
-  urlPattern: ({ url, request }) => {
-    return url.pathname.startsWith('/_next/data/') || 
-           request.headers.get('RSC') === '1' ||
-           request.headers.get('Next-Router-Prefetch') === '1';
-  },
-  handler: 'NetworkFirst',
+  urlPattern: ({ url, request }) =>
+    url.pathname.startsWith('/_next/data/') ||
+    request.headers.get('RSC') === '1' ||
+    request.headers.get('Next-Router-Prefetch') === '1',
+  handler: 'CacheFirst',
   options: {
     cacheName: 'next-data',
-    networkTimeoutSeconds: 3,
     expiration: {
       maxEntries: 100,
       maxAgeSeconds: 24 * 60 * 60,
@@ -68,7 +46,7 @@ const rscCache = {
   },
 };
 
-// Cache Next.js static files
+// Static assets (already correct)
 const nextStaticCache = {
   urlPattern: ({ url }) => url.pathname.startsWith('/_next/static/'),
   handler: 'CacheFirst',
@@ -76,14 +54,10 @@ const nextStaticCache = {
     cacheName: 'next-static',
     expiration: {
       maxEntries: 200,
-      maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+      maxAgeSeconds: 365 * 24 * 60 * 60,
     },
   },
 };
-
-// Match precache for "/" even when URL has query params (e.g. PWA launch with ?from=standalone).
-// Ensures reopening the app offline still hits the precached start URL.
-const ignoreURLParametersMatching = [/.*/];
 
 const pwaConfig = withPWA({
   dest: 'public',
@@ -91,17 +65,19 @@ const pwaConfig = withPWA({
   skipWaiting: true,
   cacheOnFrontEndNav: true,
   dynamicStartUrl: false,
-  disable: process.env.NODE_ENV === 'development', // Disable in dev for easier testing
-  fallbacks: {
-    document: '/~offline',
-  },
-  ignoreURLParametersMatching,
+
+  // 🔥 DO NOT define offline document fallback
+  // fallbacks: ❌ REMOVED
+
+  ignoreURLParametersMatching: [/.*/],
+
   runtimeCaching: [
-    nextStaticCache,  // Static assets first (most specific)
-    navigationCache,  // Navigation requests
-    rscCache,         // RSC data
-    ...defaultCache,  // Default cache rules last
+    nextStaticCache,
+    navigationCache,
+    rscCache,
+    ...defaultCache,
   ],
 });
 
 export default pwaConfig(nextConfig);
+
