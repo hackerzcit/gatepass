@@ -81,6 +81,10 @@ const nextStaticCache = {
   },
 };
 
+// Match precache for "/" even when URL has query params (e.g. PWA launch with ?from=standalone).
+// Ensures reopening the app offline still hits the precached start URL.
+const ignoreURLParametersMatching = [/.*/];
+
 const pwaConfig = withPWA({
   dest: 'public',
   register: true,
@@ -91,6 +95,7 @@ const pwaConfig = withPWA({
   fallbacks: {
     document: '/~offline',
   },
+  ignoreURLParametersMatching,
   runtimeCaching: [
     nextStaticCache,  // Static assets first (most specific)
     navigationCache,  // Navigation requests

@@ -8,7 +8,28 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+
+    let cancelled = false;
+
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((reg) => {
+        if (cancelled) return;
+        // On first install, wait for the SW to activate so precache completes.
+        // That way when the user closes and reopens offline, the SW can serve cached "/" and "/~offline".
+        if (reg.installing) {
+          reg.installing.addEventListener("statechange", function onState() {
+            if (reg.installing?.state === "activated") {
+              reg.installing.removeEventListener("statechange", onState);
+            }
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
